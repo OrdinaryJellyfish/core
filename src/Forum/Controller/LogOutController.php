@@ -3,15 +3,12 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Forum\Controller;
 
-use Flarum\Foundation\Application;
 use Flarum\Http\Exception\TokenMismatchException;
 use Flarum\Http\Rememberer;
 use Flarum\Http\SessionAuthenticator;
@@ -20,20 +17,16 @@ use Flarum\User\AssertPermissionTrait;
 use Flarum\User\Event\LoggedOut;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\View\Factory;
+use Illuminate\Support\Arr;
+use Laminas\Diactoros\Response\HtmlResponse;
+use Laminas\Diactoros\Response\RedirectResponse;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zend\Diactoros\Response\HtmlResponse;
-use Zend\Diactoros\Response\RedirectResponse;
 
 class LogOutController implements RequestHandlerInterface
 {
     use AssertPermissionTrait;
-
-    /**
-     * @var Application
-     */
-    protected $app;
 
     /**
      * @var Dispatcher
@@ -61,7 +54,6 @@ class LogOutController implements RequestHandlerInterface
     protected $url;
 
     /**
-     * @param Application $app
      * @param Dispatcher $events
      * @param SessionAuthenticator $authenticator
      * @param Rememberer $rememberer
@@ -69,14 +61,12 @@ class LogOutController implements RequestHandlerInterface
      * @param UrlGenerator $url
      */
     public function __construct(
-        Application $app,
         Dispatcher $events,
         SessionAuthenticator $authenticator,
         Rememberer $rememberer,
         Factory $view,
         UrlGenerator $url
     ) {
-        $this->app = $app;
         $this->events = $events;
         $this->authenticator = $authenticator;
         $this->rememberer = $rememberer;
@@ -94,7 +84,7 @@ class LogOutController implements RequestHandlerInterface
         $session = $request->getAttribute('session');
         $actor = $request->getAttribute('actor');
 
-        $url = array_get($request->getQueryParams(), 'return', $this->app->url());
+        $url = Arr::get($request->getQueryParams(), 'return', $this->url->to('forum')->base());
 
         // If there is no user logged in, return to the index.
         if ($actor->isGuest()) {
@@ -105,8 +95,8 @@ class LogOutController implements RequestHandlerInterface
         // allow the user to press a button to complete the log out process.
         $csrfToken = $session->token();
 
-        if (array_get($request->getQueryParams(), 'token') !== $csrfToken) {
-            $return = array_get($request->getQueryParams(), 'return');
+        if (Arr::get($request->getQueryParams(), 'token') !== $csrfToken) {
+            $return = Arr::get($request->getQueryParams(), 'return');
 
             $view = $this->view->make('flarum.forum::log-out')
                 ->with('url', $this->url->to('forum')->route('logout').'?token='.$csrfToken.($return ? '&return='.urlencode($return) : ''));

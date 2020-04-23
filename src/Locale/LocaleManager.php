@@ -3,13 +3,13 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Locale;
+
+use Illuminate\Support\Arr;
 
 class LocaleManager
 {
@@ -24,9 +24,15 @@ class LocaleManager
 
     protected $css = [];
 
-    public function __construct(Translator $translator)
+    /**
+     * @var string
+     */
+    protected $cacheDir;
+
+    public function __construct(Translator $translator, string $cacheDir = null)
     {
         $this->translator = $translator;
+        $this->cacheDir = $cacheDir;
     }
 
     public function getLocale(): string
@@ -68,12 +74,12 @@ class LocaleManager
 
     public function getJsFiles(string $locale): array
     {
-        $files = array_get($this->js, $locale, []);
+        $files = Arr::get($this->js, $locale, []);
 
         $parts = explode('-', $locale);
 
         if (count($parts) > 1) {
-            $files = array_merge(array_get($this->js, $parts[0], []), $files);
+            $files = array_merge(Arr::get($this->js, $parts[0], []), $files);
         }
 
         return $files;
@@ -86,12 +92,12 @@ class LocaleManager
 
     public function getCssFiles(string $locale): array
     {
-        $files = array_get($this->css, $locale, []);
+        $files = Arr::get($this->css, $locale, []);
 
         $parts = explode('-', $locale);
 
         if (count($parts) > 1) {
-            $files = array_merge(array_get($this->css, $parts[0], []), $files);
+            $files = array_merge(Arr::get($this->css, $parts[0], []), $files);
         }
 
         return $files;
@@ -105,5 +111,12 @@ class LocaleManager
     public function setTranslator(Translator $translator)
     {
         $this->translator = $translator;
+    }
+
+    public function clearCache()
+    {
+        if ($this->cacheDir) {
+            array_map('unlink', glob($this->cacheDir.'/*'));
+        }
     }
 }

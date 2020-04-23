@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Update;
@@ -23,10 +21,11 @@ class UpdateServiceProvider extends AbstractServiceProvider
     public function register()
     {
         $this->app->singleton('flarum.update.routes', function () {
-            return new RouteCollection;
-        });
+            $routes = new RouteCollection;
+            $this->populateRoutes($routes);
 
-        $this->loadViewsFrom(__DIR__.'/../../views/install', 'flarum.update');
+            return $routes;
+        });
     }
 
     /**
@@ -34,7 +33,7 @@ class UpdateServiceProvider extends AbstractServiceProvider
      */
     public function boot()
     {
-        $this->populateRoutes($this->app->make('flarum.update.routes'));
+        $this->loadViewsFrom(__DIR__.'/../../views/install', 'flarum.update');
     }
 
     /**

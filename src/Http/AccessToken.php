@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Http;
@@ -14,11 +12,13 @@ namespace Flarum\Http;
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
 use Flarum\User\User;
+use Illuminate\Support\Str;
 
 /**
  * @property string $token
  * @property int $user_id
- * @property int $last_activity_at
+ * @property Carbon $created_at
+ * @property Carbon|null $last_activity_at
  * @property int $lifetime_seconds
  * @property \Flarum\User\User|null $user
  */
@@ -46,8 +46,9 @@ class AccessToken extends AbstractModel
     {
         $token = new static;
 
-        $token->token = str_random(40);
+        $token->token = Str::random(40);
         $token->user_id = $userId;
+        $token->created_at = Carbon::now();
         $token->last_activity_at = Carbon::now();
         $token->lifetime_seconds = $lifetime;
 

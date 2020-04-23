@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Database;
@@ -29,7 +27,9 @@ abstract class Migration
     {
         return [
             'up' => function (Builder $schema) use ($name, $definition) {
-                $schema->create($name, $definition);
+                $schema->create($name, function (Blueprint $table) use ($schema, $definition) {
+                    $definition($table);
+                });
             },
             'down' => function (Builder $schema) use ($name) {
                 $schema->drop($name);
@@ -59,7 +59,7 @@ abstract class Migration
     {
         return [
             'up' => function (Builder $schema) use ($tableName, $columnDefinitions) {
-                $schema->table($tableName, function (Blueprint $table) use ($columnDefinitions) {
+                $schema->table($tableName, function (Blueprint $table) use ($schema, $columnDefinitions) {
                     foreach ($columnDefinitions as $columnName => $options) {
                         $type = array_shift($options);
                         $table->addColumn($type, $columnName, $options);

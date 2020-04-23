@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Post\Command;
@@ -18,6 +16,7 @@ use Flarum\Post\PostRepository;
 use Flarum\Post\PostValidator;
 use Flarum\User\AssertPermissionTrait;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Support\Arr;
 
 class EditPostHandler
 {
@@ -59,7 +58,7 @@ class EditPostHandler
         $post = $this->posts->findOrFail($command->postId, $actor);
 
         if ($post instanceof CommentPost) {
-            $attributes = array_get($data, 'attributes', []);
+            $attributes = Arr::get($data, 'attributes', []);
 
             if (isset($attributes['content'])) {
                 $this->assertCan($actor, 'edit', $post);

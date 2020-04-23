@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Formatter;
@@ -16,6 +14,7 @@ use Flarum\Formatter\Event\Parsing;
 use Flarum\Formatter\Event\Rendering;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Psr\Http\Message\ServerRequestInterface;
 use s9e\TextFormatter\Configurator;
 use s9e\TextFormatter\Unparser;
 
@@ -69,13 +68,14 @@ class Formatter
      *
      * @param string $xml
      * @param mixed $context
+     * @param ServerRequestInterface|null $request
      * @return string
      */
-    public function render($xml, $context = null)
+    public function render($xml, $context = null, ServerRequestInterface $request = null)
     {
         $renderer = $this->getRenderer();
 
-        $this->events->dispatch(new Rendering($renderer, $context, $xml));
+        $this->events->dispatch(new Rendering($renderer, $context, $xml, $request));
 
         return $renderer->render($xml);
     }
@@ -122,9 +122,9 @@ class Formatter
         $configurator->Autolink;
         $configurator->tags->onDuplicate('replace');
 
-        $this->configureExternalLinks($configurator);
-
         $this->events->dispatch(new Configuring($configurator));
+
+        $this->configureExternalLinks($configurator);
 
         return $configurator;
     }
@@ -137,8 +137,8 @@ class Formatter
         $dom = $configurator->tags['URL']->template->asDOM();
 
         foreach ($dom->getElementsByTagName('a') as $a) {
-            $a->setAttribute('target', '_blank');
-            $a->setAttribute('rel', 'nofollow');
+            $rel = $a->getAttribute('rel');
+            $a->setAttribute('rel', "$rel nofollow ugc");
         }
 
         $dom->saveChanges();

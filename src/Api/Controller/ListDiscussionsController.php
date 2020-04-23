@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Controller;
@@ -16,6 +14,7 @@ use Flarum\Discussion\Discussion;
 use Flarum\Discussion\Search\DiscussionSearcher;
 use Flarum\Http\UrlGenerator;
 use Flarum\Search\SearchCriteria;
+use Illuminate\Support\Arr;
 use Psr\Http\Message\ServerRequestInterface;
 use Tobscure\JsonApi\Document;
 
@@ -75,7 +74,7 @@ class ListDiscussionsController extends AbstractListController
     protected function data(ServerRequestInterface $request, Document $document)
     {
         $actor = $request->getAttribute('actor');
-        $query = array_get($this->extractFilter($request), 'q');
+        $query = Arr::get($this->extractFilter($request), 'q');
         $sort = $this->extractSort($request);
 
         $criteria = new SearchCriteria($actor, $query, $sort);

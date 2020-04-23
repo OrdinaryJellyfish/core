@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Controller;
@@ -102,7 +100,7 @@ abstract class AbstractSerializeController implements RequestHandlerInterface
         );
 
         $serializer = static::$container->make($this->serializer);
-        $serializer->setActor($request->getAttribute('actor'));
+        $serializer->setRequest($request);
 
         $element = $this->createElement($data, $serializer)
             ->with($this->extractInclude($request))

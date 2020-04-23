@@ -3,23 +3,21 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\User\Command;
 
 use Flarum\Http\UrlGenerator;
+use Flarum\Mail\Job\SendRawEmailJob;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\PasswordToken;
 use Flarum\User\UserRepository;
-use Illuminate\Contracts\Mail\Mailer;
+use Illuminate\Contracts\Queue\Queue;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Contracts\Validation\Factory;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Mail\Message;
 use Illuminate\Validation\ValidationException;
 
 class RequestPasswordResetHandler
@@ -35,9 +33,9 @@ class RequestPasswordResetHandler
     protected $settings;
 
     /**
-     * @var Mailer
+     * @var Queue
      */
-    protected $mailer;
+    protected $queue;
 
     /**
      * @var UrlGenerator
@@ -57,7 +55,7 @@ class RequestPasswordResetHandler
     /**
      * @param UserRepository $users
      * @param SettingsRepositoryInterface $settings
-     * @param Mailer $mailer
+     * @param Queue $queue
      * @param UrlGenerator $url
      * @param Translator $translator
      * @param Factory $validatorFactory
@@ -65,14 +63,14 @@ class RequestPasswordResetHandler
     public function __construct(
         UserRepository $users,
         SettingsRepositoryInterface $settings,
-        Mailer $mailer,
+        Queue $queue,
         UrlGenerator $url,
         Translator $translator,
         Factory $validatorFactory
     ) {
         $this->users = $users;
         $this->settings = $settings;
-        $this->mailer = $mailer;
+        $this->queue = $queue;
         $this->url = $url;
         $this->translator = $translator;
         $this->validatorFactory = $validatorFactory;
@@ -112,11 +110,9 @@ class RequestPasswordResetHandler
         ];
 
         $body = $this->translator->trans('core.email.reset_password.body', $data);
+        $subject = '['.$data['{forum}'].'] '.$this->translator->trans('core.email.reset_password.subject');
 
-        $this->mailer->raw($body, function (Message $message) use ($user, $data) {
-            $message->to($user->email);
-            $message->subject('['.$data['{forum}'].'] '.$this->translator->trans('core.email.reset_password.subject'));
-        });
+        $this->queue->push(new SendRawEmailJob($user->email, $subject, $body));
 
         return $user;
     }

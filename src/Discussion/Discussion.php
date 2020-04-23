@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Discussion;
@@ -21,10 +19,11 @@ use Flarum\Discussion\Event\Restored;
 use Flarum\Discussion\Event\Started;
 use Flarum\Event\GetModelIsPrivate;
 use Flarum\Foundation\EventGeneratorTrait;
+use Flarum\Notification\Notification;
 use Flarum\Post\MergeableInterface;
 use Flarum\Post\Post;
 use Flarum\User\User;
-use Flarum\Util\Str;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -97,11 +96,21 @@ class Discussion extends AbstractModel
     {
         parent::boot();
 
-        static::deleted(function (Discussion $discussion) {
-            $discussion->raise(new Deleted($discussion));
+        static::deleting(function (self $discussion) {
+            Notification::whereSubjectModel(Post::class)
+                ->whereIn('subject_id', function ($query) use ($discussion) {
+                    $query->select('id')->from('posts')->where('discussion_id', $discussion->id);
+                })
+                ->delete();
         });
 
-        static::saving(function (Discussion $discussion) {
+        static::deleted(function (self $discussion) {
+            $discussion->raise(new Deleted($discussion));
+
+            Notification::whereSubject($discussion)->delete();
+        });
+
+        static::saving(function (self $discussion) {
             $event = new GetModelIsPrivate($discussion);
 
             $discussion->is_private = static::$dispatcher->until($event) === true;

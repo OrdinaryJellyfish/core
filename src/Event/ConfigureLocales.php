@@ -3,20 +3,19 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Event;
 
 use DirectoryIterator;
 use Flarum\Locale\LocaleManager;
+use Illuminate\Support\Arr;
 use RuntimeException;
 
 /**
- * @deprecated
+ * @deprecated Will be removed in Beta.14. Use Flarum\Extend\LanguagePack instead.
  */
 class ConfigureLocales
 {
@@ -49,8 +48,8 @@ class ConfigureLocales
                 throw new RuntimeException("Error parsing composer.json in $name: ".json_last_error_msg());
             }
 
-            $locale = array_get($json, 'extra.flarum-locale.code');
-            $title = array_get($json, 'extra.flarum-locale.title', $title);
+            $locale = Arr::get($json, 'extra.flarum-locale.code');
+            $title = Arr::get($json, 'extra.flarum-locale.title', $title);
         }
 
         if (! isset($locale)) {

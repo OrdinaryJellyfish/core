@@ -21,12 +21,12 @@ export default class ReplyPlaceholder extends Component {
           <header className="Post-header">
             <div className="PostUser">
               <h3>
-                {avatar(app.session.user, {className: 'PostUser-avatar'})}
+                {avatar(app.session.user, { className: 'PostUser-avatar' })}
                 {username(app.session.user)}
               </h3>
             </div>
           </header>
-          <div className="Post-body" config={this.configPreview.bind(this)}/>
+          <div className="Post-body" config={this.configPreview.bind(this)} />
         </article>
       );
     }
@@ -38,8 +38,7 @@ export default class ReplyPlaceholder extends Component {
     return (
       <article className="Post ReplyPlaceholder" onclick={reply}>
         <header className="Post-header">
-          {avatar(app.session.user, {className: 'PostUser-avatar'})}{' '}
-          {app.translator.trans('core.forum.post_stream.reply_placeholder')}
+          {avatar(app.session.user, { className: 'PostUser-avatar' })} {app.translator.trans('core.forum.post_stream.reply_placeholder')}
         </header>
       </article>
     );
@@ -52,6 +51,10 @@ export default class ReplyPlaceholder extends Component {
     // body with a preview.
     let preview;
     const updateInterval = setInterval(() => {
+      // Since we're polling, the composer may have been closed in the meantime,
+      // so we bail in that case.
+      if (!app.composer.component) return;
+
       const content = app.composer.component.content();
 
       if (preview === content) return;

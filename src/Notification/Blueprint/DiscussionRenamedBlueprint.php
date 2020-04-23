@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Notification\Blueprint;
@@ -51,6 +49,19 @@ class DiscussionRenamedBlueprint implements BlueprintInterface
     public function getData()
     {
         return ['postNumber' => (int) $this->post->number];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getAttributes(): array
+    {
+        return [
+            'type' => static::getType(),
+            'from_user_id' => $this->post->user ? $this->post->user->id : null,
+            'subject_id' => $this->post->discussion ? $this->post->discussion->id : null,
+            'data' => json_encode(['postNumber' => (int) $this->post->number]),
+        ];
     }
 
     /**

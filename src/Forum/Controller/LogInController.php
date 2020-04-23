@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Forum\Controller;
@@ -18,6 +16,7 @@ use Flarum\Http\Rememberer;
 use Flarum\Http\SessionAuthenticator;
 use Flarum\User\Event\LoggedIn;
 use Flarum\User\UserRepository;
+use Illuminate\Support\Arr;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -65,7 +64,7 @@ class LogInController implements RequestHandlerInterface
     {
         $actor = $request->getAttribute('actor');
         $body = $request->getParsedBody();
-        $params = array_only($body, ['identification', 'password']);
+        $params = Arr::only($body, ['identification', 'password']);
 
         $response = $this->apiClient->send(CreateTokenController::class, $actor, [], $params);
 
@@ -79,7 +78,7 @@ class LogInController implements RequestHandlerInterface
 
             event(new LoggedIn($this->users->findOrFail($data->userId), $token));
 
-            if (array_get($body, 'remember')) {
+            if (Arr::get($body, 'remember')) {
                 $response = $this->rememberer->remember($response, $token);
             }
         }

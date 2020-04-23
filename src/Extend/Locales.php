@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Extend;
@@ -16,9 +14,9 @@ use Flarum\Extension\Extension;
 use Flarum\Locale\LocaleManager;
 use Illuminate\Contracts\Container\Container;
 
-class Locales implements ExtenderInterface
+class Locales implements ExtenderInterface, LifecycleInterface
 {
-    protected $directory;
+    private $directory;
 
     public function __construct($directory)
     {
@@ -27,23 +25,35 @@ class Locales implements ExtenderInterface
 
     public function extend(Container $container, Extension $extension = null)
     {
-        /** @var LocaleManager $locales */
-        $locales = $container->make(LocaleManager::class);
+        $container->resolving(
+            LocaleManager::class,
+            function (LocaleManager $locales) {
+                foreach (new DirectoryIterator($this->directory) as $file) {
+                    if (! $file->isFile()) {
+                        continue;
+                    }
 
-        foreach (new DirectoryIterator($this->directory) as $file) {
-            if (! $file->isFile()) {
-                continue;
+                    $extension = $file->getExtension();
+                    if (! in_array($extension, ['yml', 'yaml'])) {
+                        continue;
+                    }
+
+                    $locales->addTranslations(
+                        $file->getBasename(".$extension"),
+                        $file->getPathname()
+                    );
+                }
             }
+        );
+    }
 
-            $extension = $file->getExtension();
-            if (! in_array($extension, ['yml', 'yaml'])) {
-                continue;
-            }
+    public function onEnable(Container $container, Extension $extension)
+    {
+        $container->make(LocaleManager::class)->clearCache();
+    }
 
-            $locales->addTranslations(
-                $file->getBasename(".$extension"),
-                $file->getPathname()
-            );
-        }
+    public function onDisable(Container $container, Extension $extension)
+    {
+        $container->make(LocaleManager::class)->clearCache();
     }
 }

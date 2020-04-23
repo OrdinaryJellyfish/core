@@ -3,41 +3,33 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Frontend;
 
+use Laminas\Diactoros\Response\HtmlResponse;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zend\Diactoros\Response\HtmlResponse;
 
 class Controller implements RequestHandlerInterface
 {
     /**
-     * @var HtmlDocumentFactory
+     * @var Frontend
      */
-    protected $document;
+    protected $frontend;
 
-    /**
-     * @param HtmlDocumentFactory $document
-     */
-    public function __construct(HtmlDocumentFactory $document)
+    public function __construct(Frontend $frontend)
     {
-        $this->document = $document;
+        $this->frontend = $frontend;
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function handle(Request $request): Response
     {
         return new HtmlResponse(
-            $this->document->make($request)->render()
+            $this->frontend->document($request)->render()
         );
     }
 }

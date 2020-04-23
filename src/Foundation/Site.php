@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Foundation;
@@ -22,26 +20,20 @@ class Site
      */
     public static function fromPaths(array $paths)
     {
-        if (! isset($paths['base'])) {
+        if (! isset($paths['base'], $paths['public'], $paths['storage'])) {
             throw new InvalidArgumentException(
-                'No base path given'
+                'Paths array requires keys base, public and storage'
             );
-        }
-
-        if (! isset($paths['public'])) {
-            $paths['public'] = $paths['base'];
         }
 
         date_default_timezone_set('UTC');
 
         if (static::hasConfigFile($paths['base'])) {
-            return (new InstalledSite(
-                $paths['base'],
-                $paths['public'],
-                static::loadConfig($paths['base'])
-            ))->extendWith(static::loadExtenders($paths['base']));
+            return (
+                new InstalledSite($paths, static::loadConfig($paths['base']))
+            )->extendWith(static::loadExtenders($paths['base']));
         } else {
-            return new UninstalledSite($paths['base'], $paths['public']);
+            return new UninstalledSite($paths);
         }
     }
 
@@ -69,6 +61,12 @@ class Site
             return [];
         }
 
-        return array_flatten(require $extenderFile);
+        $extenders = require $extenderFile;
+
+        if (! is_array($extenders)) {
+            return [];
+        }
+
+        return array_flatten($extenders);
     }
 }

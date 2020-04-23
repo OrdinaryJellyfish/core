@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Controller;
@@ -15,12 +13,14 @@ use Flarum\Api\Serializer\NotificationSerializer;
 use Flarum\Discussion\Discussion;
 use Flarum\Http\UrlGenerator;
 use Flarum\Notification\NotificationRepository;
-use Flarum\User\Exception\PermissionDeniedException;
+use Flarum\User\AssertPermissionTrait;
 use Psr\Http\Message\ServerRequestInterface;
 use Tobscure\JsonApi\Document;
 
 class ListNotificationsController extends AbstractListController
 {
+    use AssertPermissionTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -67,9 +67,7 @@ class ListNotificationsController extends AbstractListController
     {
         $actor = $request->getAttribute('actor');
 
-        if ($actor->isGuest()) {
-            throw new PermissionDeniedException;
-        }
+        $this->assertRegistered($actor);
 
         $actor->markNotificationsAsRead()->save();
 
@@ -99,10 +97,6 @@ class ListNotificationsController extends AbstractListController
             $limit,
             $areMoreResults ? null : 0
         );
-
-        $notifications = array_filter($notifications, function ($notification) {
-            return ! $notification->subjectModel || $notification->subject;
-        });
 
         if (in_array('subject.discussion', $include)) {
             $this->loadSubjectDiscussions($notifications);

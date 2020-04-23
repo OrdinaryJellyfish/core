@@ -3,15 +3,14 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Event;
 
 use Flarum\Api\Controller\AbstractSerializeController;
+use Illuminate\Support\Arr;
 
 class WillGetData
 {
@@ -64,7 +63,7 @@ class WillGetData
      */
     public function removeInclude($name)
     {
-        array_forget($this->controller->include, $name);
+        Arr::forget($this->controller->include, $name);
     }
 
     /**
@@ -84,7 +83,7 @@ class WillGetData
      */
     public function removeOptionalInclude($name)
     {
-        array_forget($this->controller->optionalInclude, $name);
+        Arr::forget($this->controller->optionalInclude, $name);
     }
 
     /**
@@ -124,7 +123,7 @@ class WillGetData
      */
     public function removeSortField($field)
     {
-        array_forget($this->controller->sortFields, $field);
+        Arr::forget($this->controller->sortFields, $field);
     }
 
     /**

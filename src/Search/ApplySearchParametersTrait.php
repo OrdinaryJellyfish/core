@@ -3,13 +3,13 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Search;
+
+use Illuminate\Support\Str;
 
 trait ApplySearchParametersTrait
 {
@@ -29,10 +29,10 @@ trait ApplySearchParametersTrait
             foreach ($sort as $field => $order) {
                 if (is_array($order)) {
                     foreach ($order as $value) {
-                        $search->getQuery()->orderByRaw(snake_case($field).' != ?', [$value]);
+                        $search->getQuery()->orderByRaw(Str::snake($field).' != ?', [$value]);
                     }
                 } else {
-                    $search->getQuery()->orderBy(snake_case($field), $order);
+                    $search->getQuery()->orderBy(Str::snake($field), $order);
                 }
             }
         }

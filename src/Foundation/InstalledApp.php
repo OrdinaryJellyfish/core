@@ -3,26 +3,22 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Foundation;
 
-use Flarum\Database\Console\GenerateMigrationCommand;
-use Flarum\Database\Console\MigrateCommand;
-use Flarum\Database\Console\ResetCommand;
-use Flarum\Foundation\Console\CacheClearCommand;
 use Flarum\Foundation\Console\InfoCommand;
 use Flarum\Http\Middleware\DispatchRoute;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Illuminate\Console\Command;
 use Illuminate\Contracts\Container\Container;
+use Laminas\Stratigility\Middleware\OriginalMessages;
+use Laminas\Stratigility\MiddlewarePipe;
 use Middlewares\BasePath;
 use Middlewares\BasePathRouter;
 use Middlewares\RequestHandler;
-use Zend\Stratigility\MiddlewarePipe;
 
 class InstalledApp implements AppInterface
 {
@@ -42,6 +38,11 @@ class InstalledApp implements AppInterface
         $this->config = $config;
     }
 
+    public function getContainer()
+    {
+        return $this->container;
+    }
+
     /**
      * @return \Psr\Http\Server\RequestHandlerInterface
      */
@@ -56,11 +57,12 @@ class InstalledApp implements AppInterface
         $pipe = new MiddlewarePipe;
 
         $pipe->pipe(new BasePath($this->basePath()));
+        $pipe->pipe(new OriginalMessages);
         $pipe->pipe(
             new BasePathRouter([
-                $this->subPath('api') => 'flarum.api.middleware',
-                $this->subPath('admin') => 'flarum.admin.middleware',
-                '/' => 'flarum.forum.middleware',
+                $this->subPath('api') => 'flarum.api.handler',
+                $this->subPath('admin') => 'flarum.admin.handler',
+                '/' => 'flarum.forum.handler',
             ])
         );
         $pipe->pipe(new RequestHandler($this->container));
@@ -84,9 +86,10 @@ class InstalledApp implements AppInterface
     /**
      * @return \Psr\Http\Server\RequestHandlerInterface
      */
-    public function getUpdaterHandler()
+    private function getUpdaterHandler()
     {
         $pipe = new MiddlewarePipe;
+        $pipe->pipe(new BasePath($this->basePath()));
         $pipe->pipe(
             new DispatchRoute($this->container->make('flarum.update.routes'))
         );
@@ -101,7 +104,7 @@ class InstalledApp implements AppInterface
 
     private function subPath($pathName): string
     {
-        return '/'.$this->config['paths'][$pathName];
+        return '/'.($this->config['paths'][$pathName] ?? $pathName);
     }
 
     /**
@@ -109,12 +112,21 @@ class InstalledApp implements AppInterface
      */
     public function getConsoleCommands()
     {
-        return [
-            $this->container->make(GenerateMigrationCommand::class),
-            $this->container->make(InfoCommand::class, ['config' => $this->config]),
-            $this->container->make(MigrateCommand::class),
-            $this->container->make(ResetCommand::class),
-            $this->container->make(CacheClearCommand::class),
-        ];
+        $commands = [];
+
+        // The info command is a special case, as it requires a config parameter that's only available here.
+        $commands[] = $this->container->make(InfoCommand::class, ['config' => $this->config]);
+
+        foreach ($this->container->make('flarum.console.commands') as $command) {
+            $newCommand = $this->container->make($command);
+
+            if ($newCommand instanceof Command) {
+                $newCommand->setLaravel($this->container);
+            }
+
+            $commands[] = $newCommand;
+        }
+
+        return $commands;
     }
 }

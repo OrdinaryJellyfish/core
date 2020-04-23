@@ -3,16 +3,15 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Http;
 
 use Dflydev\FigCookies\SetCookie;
 use Flarum\Foundation\Application;
+use Illuminate\Support\Arr;
 
 class CookieFactory
 {
@@ -54,9 +53,9 @@ class CookieFactory
 
         // Get the cookie settings from the config or use the default values
         $this->prefix = $app->config('cookie.name', 'flarum');
-        $this->path = $app->config('cookie.path', array_get($url, 'path') ?: '/');
+        $this->path = $app->config('cookie.path', Arr::get($url, 'path') ?: '/');
         $this->domain = $app->config('cookie.domain');
-        $this->secure = $app->config('cookie.secure', array_get($url, 'scheme') === 'https');
+        $this->secure = $app->config('cookie.secure', Arr::get($url, 'scheme') === 'https');
     }
 
     /**

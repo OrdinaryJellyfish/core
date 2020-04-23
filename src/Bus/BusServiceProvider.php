@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Bus;
@@ -28,11 +26,13 @@ class BusServiceProvider extends AbstractServiceProvider
         });
 
         $this->app->alias(
-            BaseDispatcher::class, DispatcherContract::class
+            BaseDispatcher::class,
+            DispatcherContract::class
         );
 
         $this->app->alias(
-            BaseDispatcher::class, QueueingDispatcherContract::class
+            BaseDispatcher::class,
+            QueueingDispatcherContract::class
         );
     }
 }

@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Serializer;
@@ -20,6 +18,7 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use InvalidArgumentException;
 use LogicException;
+use Psr\Http\Message\ServerRequestInterface as Request;
 use Tobscure\JsonApi\AbstractSerializer as BaseAbstractSerializer;
 use Tobscure\JsonApi\Collection;
 use Tobscure\JsonApi\Relationship;
@@ -28,6 +27,11 @@ use Tobscure\JsonApi\SerializerInterface;
 
 abstract class AbstractSerializer extends BaseAbstractSerializer
 {
+    /**
+     * @var Request
+     */
+    protected $request;
+
     /**
      * @var User
      */
@@ -44,19 +48,28 @@ abstract class AbstractSerializer extends BaseAbstractSerializer
     protected static $container;
 
     /**
+     * @return Request
+     */
+    public function getRequest()
+    {
+        return $this->request;
+    }
+
+    /**
+     * @param Request $request
+     */
+    public function setRequest(Request $request)
+    {
+        $this->request = $request;
+        $this->actor = $request->getAttribute('actor');
+    }
+
+    /**
      * @return User
      */
     public function getActor()
     {
         return $this->actor;
-    }
-
-    /**
-     * @param User $actor
-     */
-    public function setActor(User $actor)
-    {
-        $this->actor = $actor;
     }
 
     /**
@@ -231,7 +244,7 @@ abstract class AbstractSerializer extends BaseAbstractSerializer
     {
         $serializer = static::$container->make($class);
 
-        $serializer->setActor($this->actor);
+        $serializer->setRequest($this->request);
 
         return $serializer;
     }

@@ -3,17 +3,16 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Frontend\Compiler;
 
 use Flarum\Frontend\Compiler\Source\SourceCollector;
 use Flarum\Frontend\Compiler\Source\SourceInterface;
-use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Arr;
 
 class RevisionCompiler implements CompilerInterface
 {
@@ -22,7 +21,7 @@ class RevisionCompiler implements CompilerInterface
     const EMPTY_REVISION = 'empty';
 
     /**
-     * @var FilesystemAdapter
+     * @var Filesystem
      */
     protected $assetsDir;
 
@@ -37,10 +36,10 @@ class RevisionCompiler implements CompilerInterface
     protected $sourcesCallbacks = [];
 
     /**
-     * @param FilesystemAdapter $assetsDir
+     * @param Filesystem $assetsDir
      * @param string $filename
      */
-    public function __construct(FilesystemAdapter $assetsDir, string $filename)
+    public function __construct(Filesystem $assetsDir, string $filename)
     {
         $this->assetsDir = $assetsDir;
         $this->filename = $filename;
@@ -202,7 +201,7 @@ class RevisionCompiler implements CompilerInterface
         if ($this->assetsDir->has(static::REV_MANIFEST)) {
             $manifest = json_decode($this->assetsDir->read(static::REV_MANIFEST), true);
 
-            return array_get($manifest, $this->filename);
+            return Arr::get($manifest, $this->filename);
         }
 
         return null;

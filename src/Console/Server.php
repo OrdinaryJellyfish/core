@@ -3,19 +3,22 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Console;
 
 use Flarum\Console\Event\Configuring;
-use Flarum\Foundation\Application;
+use Flarum\Foundation\ErrorHandling\Registry;
+use Flarum\Foundation\ErrorHandling\Reporter;
 use Flarum\Foundation\SiteInterface;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
-use Symfony\Component\Console\Application as ConsoleApplication;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\ConsoleEvents;
+use Symfony\Component\Console\Event\ConsoleErrorEvent;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class Server
 {
@@ -30,22 +33,50 @@ class Server
     {
         $app = $this->site->bootApp();
 
-        $console = new ConsoleApplication('Flarum', Application::VERSION);
+        $console = new Application('Flarum', \Flarum\Foundation\Application::VERSION);
 
         foreach ($app->getConsoleCommands() as $command) {
             $console->add($command);
         }
 
-        $this->extend($console);
+        $this->extend($console); // deprecated
 
         exit($console->run());
     }
 
-    private function extend(ConsoleApplication $console)
+    /**
+     * @deprecated
+     */
+    private function extend(Application $console)
     {
-        $app = Application::getInstance();
+        $container = \Illuminate\Container\Container::getInstance();
 
-        $events = $app->make(Dispatcher::class);
-        $events->fire(new Configuring($app, $console));
+        $this->handleErrors($container, $console);
+
+        $events = $container->make(Dispatcher::class);
+        $events->dispatch(new Configuring($container, $console));
+    }
+
+    private function handleErrors(Container $container, Application $console)
+    {
+        $dispatcher = new EventDispatcher();
+
+        $dispatcher->addListener(ConsoleEvents::ERROR, function (ConsoleErrorEvent $event) use ($container) {
+            /** @var Registry $registry */
+            $registry = $container->make(Registry::class);
+
+            $error = $registry->handle($event->getError());
+
+            /** @var Reporter[] $reporters */
+            $reporters = $container->tagged(Reporter::class);
+
+            if ($error->shouldBeReported()) {
+                foreach ($reporters as $reporter) {
+                    $reporter->report($error->getException());
+                }
+            }
+        });
+
+        $console->setDispatcher($dispatcher);
     }
 }

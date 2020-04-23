@@ -27,15 +27,18 @@ export default class TextEditor extends Component {
   view() {
     return (
       <div className="TextEditor">
-        <textarea className="FormControl Composer-flexible"
+        <textarea
+          className="FormControl Composer-flexible"
           config={this.configTextarea.bind(this)}
           oninput={m.withAttr('value', this.oninput.bind(this))}
           placeholder={this.props.placeholder || ''}
           disabled={!!this.props.disabled}
-          value={this.value()}/>
+          value={this.value()}
+        />
 
         <ul className="TextEditor-controls Composer-footer">
           {listItems(this.controlItems().toArray())}
+          <li className="TextEditor-toolbar">{this.toolbarItems().toArray()}</li>
         </ul>
       </div>
     );
@@ -67,28 +70,40 @@ export default class TextEditor extends Component {
   controlItems() {
     const items = new ItemList();
 
-    items.add('submit',
+    items.add(
+      'submit',
       Button.component({
         children: this.props.submitLabel,
-        icon: 'fas fa-check',
+        icon: 'fas fa-paper-plane',
         className: 'Button Button--primary',
         itemClassName: 'App-primaryControl',
-        onclick: this.onsubmit.bind(this)
+        onclick: this.onsubmit.bind(this),
       })
     );
 
     if (this.props.preview) {
-      items.add('preview',
+      items.add(
+        'preview',
         Button.component({
-          icon: 'fas fa-eye',
+          icon: 'far fa-eye',
           className: 'Button Button--icon',
           onclick: this.props.preview,
-          title: app.translator.trans('core.forum.composer.preview_tooltip')
+          title: app.translator.trans('core.forum.composer.preview_tooltip'),
+          config: (elm) => $(elm).tooltip(),
         })
       );
     }
 
     return items;
+  }
+
+  /**
+   * Build an item list for the toolbar controls.
+   *
+   * @return {ItemList}
+   */
+  toolbarItems() {
+    return new ItemList();
   }
 
   /**
@@ -109,6 +124,8 @@ export default class TextEditor extends Component {
   setSelectionRange(start, end) {
     const $textarea = this.$('textarea');
 
+    if (!$textarea.length) return;
+
     $textarea[0].setSelectionRange(start, end);
     $textarea.focus();
   }
@@ -120,6 +137,8 @@ export default class TextEditor extends Component {
    */
   getSelectionRange() {
     const $textarea = this.$('textarea');
+
+    if (!$textarea.length) return [0, 0];
 
     return [$textarea[0].selectionStart, $textarea[0].selectionEnd];
   }
@@ -141,6 +160,8 @@ export default class TextEditor extends Component {
       const pos = index + insert.length;
       this.setSelectionRange(pos, pos);
     }
+
+    textarea.dispatchEvent(new CustomEvent('input', { bubbles: true, cancelable: true }));
   }
 
   /**

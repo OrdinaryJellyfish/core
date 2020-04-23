@@ -3,15 +3,14 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Http\Middleware;
 
 use Flarum\Locale\LocaleManager;
+use Illuminate\Support\Arr;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface as Middleware;
@@ -39,7 +38,7 @@ class SetLocale implements Middleware
         if ($actor->exists) {
             $locale = $actor->getPreference('locale');
         } else {
-            $locale = array_get($request->getCookieParams(), 'locale');
+            $locale = Arr::get($request->getCookieParams(), 'locale');
         }
 
         if ($locale && $this->locales->hasLocale($locale)) {

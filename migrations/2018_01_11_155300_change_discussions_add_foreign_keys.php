@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 use Illuminate\Database\Query\Expression;
@@ -44,10 +42,11 @@ return [
 
     'down' => function (Builder $schema) {
         $schema->table('discussions', function (Blueprint $table) {
-            $table->dropForeign([
-                'user_id', 'last_posted_user_id', 'hidden_user_id',
-                'first_post_id', 'last_post_id'
-            ]);
+            $table->dropForeign(['user_id']);
+            $table->dropForeign(['last_posted_user_id']);
+            $table->dropForeign(['hidden_user_id']);
+            $table->dropForeign(['first_post_id']);
+            $table->dropForeign(['last_post_id']);
         });
     }
 ];

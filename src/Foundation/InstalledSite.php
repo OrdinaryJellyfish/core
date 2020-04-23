@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Foundation;
@@ -14,6 +12,7 @@ namespace Flarum\Foundation;
 use Flarum\Admin\AdminServiceProvider;
 use Flarum\Api\ApiServiceProvider;
 use Flarum\Bus\BusServiceProvider;
+use Flarum\Console\ConsoleServiceProvider;
 use Flarum\Database\DatabaseServiceProvider;
 use Flarum\Database\MigrationServiceProvider;
 use Flarum\Discussion\DiscussionServiceProvider;
@@ -22,11 +21,13 @@ use Flarum\Formatter\FormatterServiceProvider;
 use Flarum\Forum\ForumServiceProvider;
 use Flarum\Frontend\FrontendServiceProvider;
 use Flarum\Group\GroupServiceProvider;
+use Flarum\Http\HttpServiceProvider;
 use Flarum\Locale\LocaleServiceProvider;
+use Flarum\Mail\MailServiceProvider;
 use Flarum\Notification\NotificationServiceProvider;
 use Flarum\Post\PostServiceProvider;
+use Flarum\Queue\QueueServiceProvider;
 use Flarum\Search\SearchServiceProvider;
-use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\Settings\SettingsServiceProvider;
 use Flarum\Update\UpdateServiceProvider;
 use Flarum\User\SessionServiceProvider;
@@ -36,10 +37,10 @@ use Illuminate\Cache\Repository as CacheRepository;
 use Illuminate\Config\Repository as ConfigRepository;
 use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Contracts\Cache\Store;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Filesystem\FilesystemServiceProvider;
 use Illuminate\Hashing\HashServiceProvider;
-use Illuminate\Mail\MailServiceProvider;
 use Illuminate\Validation\ValidationServiceProvider;
 use Illuminate\View\ViewServiceProvider;
 use Monolog\Formatter\LineFormatter;
@@ -50,19 +51,9 @@ use Psr\Log\LoggerInterface;
 class InstalledSite implements SiteInterface
 {
     /**
-     * @var string
+     * @var array
      */
-    private $basePath;
-
-    /**
-     * @var string
-     */
-    private $publicPath;
-
-    /**
-     * @var string
-     */
-    private $storagePath;
+    private $paths;
 
     /**
      * @var array
@@ -74,17 +65,16 @@ class InstalledSite implements SiteInterface
      */
     private $extenders = [];
 
-    public function __construct($basePath, $publicPath, array $config)
+    public function __construct(array $paths, array $config)
     {
-        $this->basePath = $basePath;
-        $this->publicPath = $publicPath;
+        $this->paths = $paths;
         $this->config = $config;
     }
 
     /**
      * Create and boot a Flarum application instance.
      *
-     * @return AppInterface
+     * @return InstalledApp
      */
     public function bootApp(): AppInterface
     {
@@ -92,17 +82,6 @@ class InstalledSite implements SiteInterface
             $this->bootLaravel(),
             $this->config
         );
-    }
-
-    /**
-     * @param $storagePath
-     * @return static
-     */
-    public function setStoragePath($storagePath)
-    {
-        $this->storagePath = $storagePath;
-
-        return $this;
     }
 
     /**
@@ -118,10 +97,12 @@ class InstalledSite implements SiteInterface
 
     private function bootLaravel(): Application
     {
-        $laravel = new Application($this->basePath, $this->publicPath);
+        $laravel = new Application($this->paths['base'], $this->paths['public']);
 
-        if ($this->storagePath) {
-            $laravel->useStoragePath($this->storagePath);
+        $laravel->useStoragePath($this->paths['storage']);
+
+        if (isset($this->paths['vendor'])) {
+            $laravel->useVendorPath($this->paths['vendor']);
         }
 
         $laravel->instance('env', 'production');
@@ -131,50 +112,45 @@ class InstalledSite implements SiteInterface
         $this->registerLogger($laravel);
         $this->registerCache($laravel);
 
-        $laravel->register(DatabaseServiceProvider::class);
-        $laravel->register(MigrationServiceProvider::class);
-        $laravel->register(SettingsServiceProvider::class);
-        $laravel->register(LocaleServiceProvider::class);
+        $laravel->register(AdminServiceProvider::class);
+        $laravel->register(ApiServiceProvider::class);
         $laravel->register(BusServiceProvider::class);
-        $laravel->register(FilesystemServiceProvider::class);
-        $laravel->register(HashServiceProvider::class);
-        $laravel->register(MailServiceProvider::class);
-        $laravel->register(ViewServiceProvider::class);
-        $laravel->register(ValidationServiceProvider::class);
-
-        $settings = $laravel->make(SettingsRepositoryInterface::class);
-
-        $config->set('mail.driver', $settings->get('mail_driver'));
-        $config->set('mail.host', $settings->get('mail_host'));
-        $config->set('mail.port', $settings->get('mail_port'));
-        $config->set('mail.from.address', $settings->get('mail_from'));
-        $config->set('mail.from.name', $settings->get('forum_title'));
-        $config->set('mail.encryption', $settings->get('mail_encryption'));
-        $config->set('mail.username', $settings->get('mail_username'));
-        $config->set('mail.password', $settings->get('mail_password'));
-
+        $laravel->register(ConsoleServiceProvider::class);
+        $laravel->register(DatabaseServiceProvider::class);
         $laravel->register(DiscussionServiceProvider::class);
+        $laravel->register(ExtensionServiceProvider::class);
+        $laravel->register(ErrorServiceProvider::class);
+        $laravel->register(FilesystemServiceProvider::class);
         $laravel->register(FormatterServiceProvider::class);
+        $laravel->register(ForumServiceProvider::class);
         $laravel->register(FrontendServiceProvider::class);
         $laravel->register(GroupServiceProvider::class);
+        $laravel->register(HashServiceProvider::class);
+        $laravel->register(HttpServiceProvider::class);
+        $laravel->register(LocaleServiceProvider::class);
+        $laravel->register(MailServiceProvider::class);
+        $laravel->register(MigrationServiceProvider::class);
         $laravel->register(NotificationServiceProvider::class);
         $laravel->register(PostServiceProvider::class);
+        $laravel->register(QueueServiceProvider::class);
         $laravel->register(SearchServiceProvider::class);
         $laravel->register(SessionServiceProvider::class);
-        $laravel->register(UserServiceProvider::class);
+        $laravel->register(SettingsServiceProvider::class);
         $laravel->register(UpdateServiceProvider::class);
+        $laravel->register(UserServiceProvider::class);
+        $laravel->register(ValidationServiceProvider::class);
+        $laravel->register(ViewServiceProvider::class);
 
-        $laravel->register(ApiServiceProvider::class);
-        $laravel->register(ForumServiceProvider::class);
-        $laravel->register(AdminServiceProvider::class);
-
-        $laravel->register(ExtensionServiceProvider::class);
+        $laravel->booting(function (Container $app) {
+            // Run all local-site extenders before booting service providers
+            // (but after those from "real" extensions, which have been set up
+            // in a service provider above).
+            foreach ($this->extenders as $extension) {
+                $extension->extend($app);
+            }
+        });
 
         $laravel->boot();
-
-        foreach ($this->extenders as $extension) {
-            $extension->extend($laravel);
-        }
 
         return $laravel;
     }
@@ -188,7 +164,7 @@ class InstalledSite implements SiteInterface
         return new ConfigRepository([
             'view' => [
                 'paths' => [],
-                'compiled' => $app->storagePath().'/views',
+                'compiled' => $this->paths['storage'].'/views',
             ],
             'mail' => [
                 'driver' => 'mail',
@@ -199,18 +175,18 @@ class InstalledSite implements SiteInterface
                 'disks' => [
                     'flarum-assets' => [
                         'driver' => 'local',
-                        'root'   => $app->publicPath().'/assets',
+                        'root'   => $this->paths['public'].'/assets',
                         'url'    => $app->url('assets')
                     ],
                     'flarum-avatars' => [
                         'driver' => 'local',
-                        'root'   => $app->publicPath().'/assets/avatars'
+                        'root'   => $this->paths['public'].'/assets/avatars'
                     ]
                 ]
             ],
             'session' => [
                 'lifetime' => 120,
-                'files' => $app->storagePath().'/sessions',
+                'files' => $this->paths['storage'].'/sessions',
                 'cookie' => 'session'
             ]
         ]);
@@ -218,7 +194,7 @@ class InstalledSite implements SiteInterface
 
     private function registerLogger(Application $app)
     {
-        $logPath = $app->storagePath().'/logs/flarum.log';
+        $logPath = $this->paths['storage'].'/logs/flarum.log';
         $handler = new RotatingFileHandler($logPath, Logger::INFO);
         $handler->setFormatter(new LineFormatter(null, null, true, true));
 
@@ -233,8 +209,8 @@ class InstalledSite implements SiteInterface
         });
         $app->alias('cache.store', Repository::class);
 
-        $app->singleton('cache.filestore', function ($app) {
-            return new FileStore(new Filesystem, $app->storagePath().'/cache');
+        $app->singleton('cache.filestore', function () {
+            return new FileStore(new Filesystem, $this->paths['storage'].'/cache');
         });
         $app->alias('cache.filestore', Store::class);
     }

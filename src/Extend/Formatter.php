@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Extend;
@@ -19,9 +17,9 @@ use Illuminate\Events\Dispatcher;
 
 class Formatter implements ExtenderInterface, LifecycleInterface
 {
-    protected $callback;
+    private $callback;
 
-    public function configure(callable $callback)
+    public function configure($callback)
     {
         $this->callback = $callback;
 
@@ -34,8 +32,14 @@ class Formatter implements ExtenderInterface, LifecycleInterface
 
         $events->listen(
             Configuring::class,
-            function (Configuring $event) {
-                call_user_func($this->callback, $event->configurator);
+            function (Configuring $event) use ($container) {
+                if (is_string($this->callback)) {
+                    $callback = $container->make($this->callback);
+                } else {
+                    $callback = $this->callback;
+                }
+
+                $callback($event->configurator);
             }
         );
     }

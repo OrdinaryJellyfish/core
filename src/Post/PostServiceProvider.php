@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Post;
@@ -26,17 +24,17 @@ class PostServiceProvider extends AbstractServiceProvider
         $this->registerPostTypes();
 
         $events = $this->app->make('events');
-        $events->subscribe('Flarum\Post\PostPolicy');
+        $events->subscribe(PostPolicy::class);
     }
 
     public function registerPostTypes()
     {
         $models = [
-            'Flarum\Post\CommentPost',
-            'Flarum\Post\DiscussionRenamedPost'
+            CommentPost::class,
+            DiscussionRenamedPost::class
         ];
 
-        $this->app->make('events')->fire(
+        $this->app->make('events')->dispatch(
             new ConfigurePostTypes($models)
         );
 

@@ -3,17 +3,25 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Search;
 
+use Flarum\Discussion\Search\DiscussionSearcher;
+use Flarum\Discussion\Search\Gambit\AuthorGambit;
+use Flarum\Discussion\Search\Gambit\CreatedGambit;
+use Flarum\Discussion\Search\Gambit\FulltextGambit as DiscussionFulltextGambit;
+use Flarum\Discussion\Search\Gambit\HiddenGambit;
+use Flarum\Discussion\Search\Gambit\UnreadGambit;
 use Flarum\Event\ConfigureDiscussionGambits;
 use Flarum\Event\ConfigureUserGambits;
 use Flarum\Foundation\AbstractServiceProvider;
+use Flarum\User\Search\Gambit\EmailGambit;
+use Flarum\User\Search\Gambit\FulltextGambit as UserFulltextGambit;
+use Flarum\User\Search\Gambit\GroupGambit;
+use Flarum\User\Search\UserSearcher;
 use Illuminate\Contracts\Container\Container;
 
 class SearchServiceProvider extends AbstractServiceProvider
@@ -25,11 +33,6 @@ class SearchServiceProvider extends AbstractServiceProvider
      */
     public function register()
     {
-        $this->app->bind(
-            'Flarum\Discussion\Search\Fulltext\DriverInterface',
-            'Flarum\Discussion\Search\Fulltext\MySqlFulltextDriver'
-        );
-
         $this->registerDiscussionGambits();
 
         $this->registerUserGambits();
@@ -37,16 +40,16 @@ class SearchServiceProvider extends AbstractServiceProvider
 
     public function registerUserGambits()
     {
-        $this->app->when('Flarum\User\Search\UserSearcher')
-            ->needs('Flarum\Search\GambitManager')
+        $this->app->when(UserSearcher::class)
+            ->needs(GambitManager::class)
             ->give(function (Container $app) {
                 $gambits = new GambitManager($app);
 
-                $gambits->setFulltextGambit('Flarum\User\Search\Gambit\FulltextGambit');
-                $gambits->add('Flarum\User\Search\Gambit\EmailGambit');
-                $gambits->add('Flarum\User\Search\Gambit\GroupGambit');
+                $gambits->setFulltextGambit(UserFulltextGambit::class);
+                $gambits->add(EmailGambit::class);
+                $gambits->add(GroupGambit::class);
 
-                $app->make('events')->fire(
+                $app->make('events')->dispatch(
                     new ConfigureUserGambits($gambits)
                 );
 
@@ -56,18 +59,18 @@ class SearchServiceProvider extends AbstractServiceProvider
 
     public function registerDiscussionGambits()
     {
-        $this->app->when('Flarum\Discussion\Search\DiscussionSearcher')
-            ->needs('Flarum\Search\GambitManager')
+        $this->app->when(DiscussionSearcher::class)
+            ->needs(GambitManager::class)
             ->give(function (Container $app) {
                 $gambits = new GambitManager($app);
 
-                $gambits->setFulltextGambit('Flarum\Discussion\Search\Gambit\FulltextGambit');
-                $gambits->add('Flarum\Discussion\Search\Gambit\AuthorGambit');
-                $gambits->add('Flarum\Discussion\Search\Gambit\CreatedGambit');
-                $gambits->add('Flarum\Discussion\Search\Gambit\HiddenGambit');
-                $gambits->add('Flarum\Discussion\Search\Gambit\UnreadGambit');
+                $gambits->setFulltextGambit(DiscussionFulltextGambit::class);
+                $gambits->add(AuthorGambit::class);
+                $gambits->add(CreatedGambit::class);
+                $gambits->add(HiddenGambit::class);
+                $gambits->add(UnreadGambit::class);
 
-                $app->make('events')->fire(
+                $app->make('events')->dispatch(
                     new ConfigureDiscussionGambits($gambits)
                 );
 

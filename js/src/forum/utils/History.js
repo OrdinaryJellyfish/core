@@ -64,9 +64,9 @@ export default class History {
     // then we'll overwrite it with the new URL.
     const top = this.getCurrent();
     if (top && top.name === name) {
-      Object.assign(top, {url, title});
+      Object.assign(top, { url, title });
     } else {
-      this.stack.push({name, url, title});
+      this.stack.push({ name, url, title });
     }
   }
 
@@ -86,6 +86,10 @@ export default class History {
    * @public
    */
   back() {
+    if (!this.canGoBack()) {
+      return this.home();
+    }
+
     this.stack.pop();
 
     m.route(this.getCurrent().url);

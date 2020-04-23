@@ -3,21 +3,22 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Install;
 
 use Flarum\Foundation\AppInterface;
+use Flarum\Foundation\ErrorHandling\Registry;
+use Flarum\Foundation\ErrorHandling\Reporter;
+use Flarum\Foundation\ErrorHandling\WhoopsFormatter;
 use Flarum\Http\Middleware\DispatchRoute;
-use Flarum\Http\Middleware\HandleErrorsWithWhoops;
+use Flarum\Http\Middleware\HandleErrors;
 use Flarum\Http\Middleware\StartSession;
 use Flarum\Install\Console\InstallCommand;
 use Illuminate\Contracts\Container\Container;
-use Zend\Stratigility\MiddlewarePipe;
+use Laminas\Stratigility\MiddlewarePipe;
 
 class Installer implements AppInterface
 {
@@ -37,7 +38,11 @@ class Installer implements AppInterface
     public function getRequestHandler()
     {
         $pipe = new MiddlewarePipe;
-        $pipe->pipe($this->container->make(HandleErrorsWithWhoops::class));
+        $pipe->pipe(new HandleErrors(
+            $this->container->make(Registry::class),
+            $this->container->make(WhoopsFormatter::class),
+            $this->container->tagged(Reporter::class)
+        ));
         $pipe->pipe($this->container->make(StartSession::class));
         $pipe->pipe(
             new DispatchRoute($this->container->make('flarum.install.routes'))
@@ -52,7 +57,9 @@ class Installer implements AppInterface
     public function getConsoleCommands()
     {
         return [
-            $this->container->make(InstallCommand::class),
+            new InstallCommand(
+                $this->container->make(Installation::class)
+            ),
         ];
     }
 }

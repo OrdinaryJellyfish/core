@@ -3,23 +3,21 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Frontend\Content;
 
 use Flarum\Api\Client;
 use Flarum\Api\Controller\ShowUserController;
-use Flarum\Frontend\HtmlDocument;
+use Flarum\Frontend\Document;
 use Flarum\Locale\LocaleManager;
 use Flarum\User\User;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
-class CorePayload implements ContentInterface
+class CorePayload
 {
     /**
      * @var LocaleManager
@@ -41,7 +39,7 @@ class CorePayload implements ContentInterface
         $this->api = $api;
     }
 
-    public function populate(HtmlDocument $document, Request $request)
+    public function __invoke(Document $document, Request $request)
     {
         $document->payload = array_merge(
             $document->payload,
@@ -49,7 +47,7 @@ class CorePayload implements ContentInterface
         );
     }
 
-    private function buildPayload(HtmlDocument $document, Request $request)
+    private function buildPayload(Document $document, Request $request)
     {
         $data = $this->getDataFromApiDocument($document->getForumApiDocument());
 

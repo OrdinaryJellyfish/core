@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Controller;
@@ -15,6 +13,8 @@ use Flarum\Api\Serializer\PostSerializer;
 use Flarum\Event\ConfigurePostsQuery;
 use Flarum\Post\PostRepository;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Psr\Http\Message\ServerRequestInterface;
 use Tobscure\JsonApi\Document;
 use Tobscure\JsonApi\Exception\InvalidParameterException;
@@ -64,7 +64,7 @@ class ListPostsController extends AbstractListController
         $filter = $this->extractFilter($request);
         $include = $this->extractInclude($request);
 
-        if ($postIds = array_get($filter, 'id')) {
+        if ($postIds = Arr::get($filter, 'id')) {
             $postIds = explode(',', $postIds);
         } else {
             $postIds = $this->getPostIds($request);
@@ -86,7 +86,7 @@ class ListPostsController extends AbstractListController
         $limit = $this->extractLimit($request);
         $filter = $this->extractFilter($request);
 
-        if (($near = array_get($queryParams, 'page.near')) > 1) {
+        if (($near = Arr::get($queryParams, 'page.near')) > 1) {
             if (count($filter) > 1 || ! isset($filter['discussion']) || $sort) {
                 throw new InvalidParameterException(
                     'You can only use page[near] with filter[discussion] and the default sort order'
@@ -120,7 +120,7 @@ class ListPostsController extends AbstractListController
         $query->skip($offset)->take($limit);
 
         foreach ((array) $sort as $field => $order) {
-            $query->orderBy(snake_case($field), $order);
+            $query->orderBy(Str::snake($field), $order);
         }
 
         return $query->pluck('id')->all();
@@ -132,19 +132,19 @@ class ListPostsController extends AbstractListController
      */
     private function applyFilters(Builder $query, array $filter)
     {
-        if ($discussionId = array_get($filter, 'discussion')) {
+        if ($discussionId = Arr::get($filter, 'discussion')) {
             $query->where('discussion_id', $discussionId);
         }
 
-        if ($number = array_get($filter, 'number')) {
+        if ($number = Arr::get($filter, 'number')) {
             $query->where('number', $number);
         }
 
-        if ($userId = array_get($filter, 'user')) {
+        if ($userId = Arr::get($filter, 'user')) {
             $query->where('user_id', $userId);
         }
 
-        if ($type = array_get($filter, 'type')) {
+        if ($type = Arr::get($filter, 'type')) {
             $query->where('type', $type);
         }
 

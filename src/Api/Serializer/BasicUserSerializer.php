@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Serializer;
@@ -47,6 +45,10 @@ class BasicUserSerializer extends AbstractSerializer
      */
     protected function groups($user)
     {
-        return $this->hasMany($user, GroupSerializer::class);
+        if ($this->getActor()->can('viewHiddenGroups')) {
+            return $this->hasMany($user, GroupSerializer::class);
+        }
+
+        return $this->hasMany($user, GroupSerializer::class, 'visibleGroups');
     }
 }

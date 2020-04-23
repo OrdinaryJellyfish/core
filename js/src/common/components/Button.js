@@ -29,6 +29,12 @@ export default class Button extends Component {
     attrs.className = attrs.className || '';
     attrs.type = attrs.type || 'button';
 
+    // If a tooltip was provided for buttons without additional content, we also
+    // use this tooltip as text for screen readers
+    if (attrs.title && !this.props.children) {
+      attrs['aria-label'] = attrs.title;
+    }
+
     // If nothing else is provided, we use the textual button content as tooltip
     if (!attrs.title && this.props.children) {
       attrs.title = extractText(this.props.children);
@@ -56,9 +62,9 @@ export default class Button extends Component {
     const iconName = this.props.icon;
 
     return [
-      iconName && iconName !== true ? icon(iconName, {className: 'Button-icon'}) : '',
+      iconName && iconName !== true ? icon(iconName, { className: 'Button-icon' }) : '',
       this.props.children ? <span className="Button-label">{this.props.children}</span> : '',
-      this.props.loading ? LoadingIndicator.component({size: 'tiny', className: 'LoadingIndicator--inline'}) : ''
+      this.props.loading ? LoadingIndicator.component({ size: 'tiny', className: 'LoadingIndicator--inline' }) : '',
     ];
   }
 }

@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Database;
@@ -55,13 +53,13 @@ abstract class AbstractModel extends Eloquent
     {
         parent::boot();
 
-        static::saved(function (AbstractModel $model) {
+        static::saved(function (self $model) {
             foreach ($model->releaseAfterSaveCallbacks() as $callback) {
                 $callback($model);
             }
         });
 
-        static::deleted(function (AbstractModel $model) {
+        static::deleted(function (self $model) {
             foreach ($model->releaseAfterDeleteCallbacks() as $callback) {
                 $callback($model);
             }

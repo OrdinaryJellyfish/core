@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Discussion\Command;
@@ -17,6 +15,7 @@ use Flarum\Discussion\Event\Saving;
 use Flarum\Foundation\DispatchEventsTrait;
 use Flarum\User\AssertPermissionTrait;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Support\Arr;
 
 class EditDiscussionHandler
 {
@@ -54,7 +53,7 @@ class EditDiscussionHandler
     {
         $actor = $command->actor;
         $data = $command->data;
-        $attributes = array_get($data, 'attributes', []);
+        $attributes = Arr::get($data, 'attributes', []);
 
         $discussion = $this->discussions->findOrFail($command->discussionId, $actor);
 

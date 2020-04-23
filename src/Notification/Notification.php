@@ -3,17 +3,19 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Notification;
 
 use Carbon\Carbon;
 use Flarum\Database\AbstractModel;
+use Flarum\Event\ScopeModelVisibility;
+use Flarum\Notification\Blueprint\BlueprintInterface;
 use Flarum\User\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 
 /**
  * Models a notification record in the database.
@@ -102,7 +104,7 @@ class Notification extends AbstractModel
      */
     public function getSubjectModelAttribute()
     {
-        return $this->type ? array_get(static::$subjectModels, $this->type) : null;
+        return $this->type ? Arr::get(static::$subjectModels, $this->type) : null;
     }
 
     /**
@@ -136,6 +138,103 @@ class Notification extends AbstractModel
     }
 
     /**
+     * Scope the query to include only notifications whose subjects are visible
+     * to the given user.
+     *
+     * @param Builder $query
+     * @return Builder
+     */
+    public function scopeWhereSubjectVisibleTo(Builder $query, User $actor)
+    {
+        return $query->where(function ($query) use ($actor) {
+            $classes = [];
+
+            foreach (static::$subjectModels as $type => $class) {
+                $classes[$class][] = $type;
+            }
+
+            foreach ($classes as $class => $types) {
+                $query->orWhere(function ($query) use ($types, $class, $actor) {
+                    $query->whereIn('type', $types)
+                        ->whereExists(function ($query) use ($class, $actor) {
+                            $query->selectRaw(1)
+                                ->from((new $class)->getTable())
+                                ->whereColumn('id', 'subject_id');
+
+                            static::$dispatcher->dispatch(
+                                new ScopeModelVisibility($class::query()->setQuery($query), $actor, 'view')
+                            );
+                        });
+                });
+            }
+        });
+    }
+
+    /**
+     * Scope the query to include only notifications that have the given
+     * subject.
+     *
+     * @param Builder $query
+     * @param object $model
+     * @return Builder
+     */
+    public function scopeWhereSubject(Builder $query, $model)
+    {
+        return $query->whereSubjectModel(get_class($model))
+            ->where('subject_id', $model->id);
+    }
+
+    /**
+     * Scope the query to include only notification types that use the given
+     * subject model.
+     *
+     * @param Builder $query
+     * @param string $class
+     * @return Builder
+     */
+    public function scopeWhereSubjectModel(Builder $query, string $class)
+    {
+        $notificationTypes = array_filter(self::getSubjectModels(), function ($modelClass) use ($class) {
+            return $modelClass === $class or is_subclass_of($class, $modelClass);
+        });
+
+        return $query->whereIn('type', array_keys($notificationTypes));
+    }
+
+    /**
+     * Scope the query to find all records matching the given blueprint.
+     *
+     * @param Builder $query
+     * @param BlueprintInterface $blueprint
+     * @return Builder
+     */
+    public function scopeMatchingBlueprint(Builder $query, BlueprintInterface $blueprint)
+    {
+        return $query->where(static::getBlueprintAttributes($blueprint));
+    }
+
+    /**
+     * Send notifications to the given recipients.
+     *
+     * @param User[] $recipients
+     * @param BlueprintInterface $blueprint
+     */
+    public static function notify(array $recipients, BlueprintInterface $blueprint)
+    {
+        $attributes = static::getBlueprintAttributes($blueprint);
+        $now = Carbon::now('utc')->toDateTimeString();
+
+        static::insert(
+            array_map(function (User $user) use ($attributes, $now) {
+                return $attributes + [
+                    'user_id' => $user->id,
+                    'created_at' => $now
+                ];
+            }, $recipients)
+        );
+    }
+
+    /**
      * Get the type-to-subject-model map.
      *
      * @return array
@@ -156,5 +255,15 @@ class Notification extends AbstractModel
     public static function setSubjectModel($type, $subjectModel)
     {
         static::$subjectModels[$type] = $subjectModel;
+    }
+
+    private static function getBlueprintAttributes(BlueprintInterface $blueprint): array
+    {
+        return [
+            'type' => $blueprint::getType(),
+            'from_user_id' => ($fromUser = $blueprint->getFromUser()) ? $fromUser->id : null,
+            'subject_id' => ($subject = $blueprint->getSubject()) ? $subject->id : null,
+            'data' => ($data = $blueprint->getData()) ? json_encode($data) : null
+        ];
     }
 }

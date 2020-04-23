@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api\Controller;
@@ -14,13 +12,16 @@ namespace Flarum\Api\Controller;
 use Flarum\Api\Serializer\UserSerializer;
 use Flarum\Http\UrlGenerator;
 use Flarum\Search\SearchCriteria;
-use Flarum\User\Exception\PermissionDeniedException;
+use Flarum\User\AssertPermissionTrait;
 use Flarum\User\Search\UserSearcher;
+use Illuminate\Support\Arr;
 use Psr\Http\Message\ServerRequestInterface;
 use Tobscure\JsonApi\Document;
 
 class ListUsersController extends AbstractListController
 {
+    use AssertPermissionTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -69,11 +70,9 @@ class ListUsersController extends AbstractListController
     {
         $actor = $request->getAttribute('actor');
 
-        if ($actor->cannot('viewUserList')) {
-            throw new PermissionDeniedException;
-        }
+        $this->assertCan($actor, 'viewUserList');
 
-        $query = array_get($this->extractFilter($request), 'q');
+        $query = Arr::get($this->extractFilter($request), 'q');
         $sort = $this->extractSort($request);
 
         $criteria = new SearchCriteria($actor, $query, $sort);

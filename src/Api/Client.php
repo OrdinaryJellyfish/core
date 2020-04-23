@@ -3,21 +3,22 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Api;
 
 use Exception;
+use Flarum\Foundation\ErrorHandling\JsonApiFormatter;
+use Flarum\Foundation\ErrorHandling\Registry;
 use Flarum\User\User;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
+use Laminas\Diactoros\ServerRequestFactory;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zend\Diactoros\ServerRequestFactory;
+use Throwable;
 
 class Client
 {
@@ -27,18 +28,18 @@ class Client
     protected $container;
 
     /**
-     * @var ErrorHandler
+     * @var Registry
      */
-    protected $errorHandler;
+    protected $registry;
 
     /**
      * @param Container $container
-     * @param ErrorHandler $errorHandler
+     * @param Registry $registry
      */
-    public function __construct(Container $container, ErrorHandler $errorHandler = null)
+    public function __construct(Container $container, Registry $registry)
     {
         $this->container = $container;
-        $this->errorHandler = $errorHandler;
+        $this->registry = $registry;
     }
 
     /**
@@ -69,23 +70,14 @@ class Client
 
         try {
             return $controller->handle($request);
-        } catch (Exception $e) {
-            if (! $this->errorHandler) {
+        } catch (Throwable $e) {
+            $error = $this->registry->handle($e);
+
+            if ($error->shouldBeReported()) {
                 throw $e;
             }
 
-            return $this->errorHandler->handle($e);
+            return (new JsonApiFormatter)->format($error, $request);
         }
-    }
-
-    /**
-     * @param ErrorHandler $errorHandler
-     * @return Client
-     */
-    public function setErrorHandler(?ErrorHandler $errorHandler): self
-    {
-        $this->errorHandler = $errorHandler;
-
-        return $this;
     }
 }

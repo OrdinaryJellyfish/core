@@ -3,10 +3,8 @@
 /*
  * This file is part of Flarum.
  *
- * (c) Toby Zerner <toby.zerner@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * For detailed copyright and license information, please view the
+ * LICENSE file that was distributed with this source code.
  */
 
 namespace Flarum\Discussion;
@@ -141,7 +139,11 @@ class DiscussionPolicy extends AbstractPolicy
      */
     public function hide(User $actor, Discussion $discussion)
     {
-        if ($discussion->user_id == $actor->id && $discussion->participant_count <= 1 && $actor->can('reply', $discussion)) {
+        if ($discussion->user_id == $actor->id
+            && $discussion->participant_count <= 1
+            && (! $discussion->hidden_at || $discussion->hidden_user_id == $actor->id)
+            && $actor->can('reply', $discussion)
+        ) {
             return true;
         }
     }
