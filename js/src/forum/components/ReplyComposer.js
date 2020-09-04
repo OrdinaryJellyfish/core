@@ -1,5 +1,4 @@
 import ComposerBody from './ComposerBody';
-import Alert from '../../common/components/Alert';
 import Button from '../../common/components/Button';
 import icon from '../../common/helpers/icon';
 import extractText from '../../common/utils/extractText';
@@ -21,16 +20,6 @@ function minimizeComposerIfFullScreen(e) {
  * - `discussion`
  */
 export default class ReplyComposer extends ComposerBody {
-  init() {
-    super.init();
-
-    this.editor.props.preview = (e) => {
-      minimizeComposerIfFullScreen(e);
-
-      m.route(app.route.discussion(this.props.discussion, 'reply'));
-    };
-  }
-
   static initProps(props) {
     super.initProps(props);
 
@@ -63,13 +52,22 @@ export default class ReplyComposer extends ComposerBody {
   }
 
   /**
+   * Jump to the preview when triggered by the text editor.
+   */
+  jumpToPreview(e) {
+    minimizeComposerIfFullScreen(e);
+
+    m.route(app.route.discussion(this.props.discussion, 'reply'));
+  }
+
+  /**
    * Get the data to submit to the server when the reply is saved.
    *
    * @return {Object}
    */
   data() {
     return {
-      content: this.content(),
+      content: this.composer.fields.content(),
       relationships: { discussion: this.props.discussion },
     };
   }
@@ -89,7 +87,8 @@ export default class ReplyComposer extends ComposerBody {
         // If we're currently viewing the discussion which this reply was made
         // in, then we can update the post stream and scroll to the post.
         if (app.viewingDiscussion(discussion)) {
-          app.current.stream.update().then(() => app.current.stream.goToNumber(post.number()));
+          const stream = app.current.get('stream');
+          stream.update().then(() => stream.goToNumber(post.number()));
         } else {
           // Otherwise, we'll create an alert message to inform the user that
           // their reply has been posted, containing a button which will
@@ -103,16 +102,14 @@ export default class ReplyComposer extends ComposerBody {
               app.alerts.dismiss(alert);
             },
           });
-          app.alerts.show(
-            (alert = new Alert({
-              type: 'success',
-              children: app.translator.trans('core.forum.composer_reply.posted_message'),
-              controls: [viewButton],
-            }))
-          );
+          alert = app.alerts.show({
+            type: 'success',
+            children: app.translator.trans('core.forum.composer_reply.posted_message'),
+            controls: [viewButton],
+          });
         }
 
-        app.composer.hide();
+        this.composer.hide();
       }, this.loaded.bind(this));
   }
 }

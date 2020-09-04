@@ -2,6 +2,7 @@ import EditPostComposer from '../components/EditPostComposer';
 import Button from '../../common/components/Button';
 import Separator from '../../common/components/Separator';
 import ItemList from '../../common/utils/ItemList';
+import extractText from '../../common/utils/extractText';
 
 /**
  * The `PostControls` utility constructs a list of buttons for a post which
@@ -129,12 +130,10 @@ export default {
   editAction() {
     const deferred = m.deferred();
 
-    const component = new EditPostComposer({ post: this });
-
-    app.composer.load(component);
+    app.composer.load(EditPostComposer, { post: this });
     app.composer.show();
 
-    deferred.resolve(component);
+    deferred.resolve(app.composer);
 
     return deferred.promise;
   },
@@ -145,6 +144,7 @@ export default {
    * @return {Promise}
    */
   hideAction() {
+    if (!confirm(extractText(app.translator.trans('core.forum.post_controls.hide_confirmation')))) return;
     this.pushAttributes({ hiddenAt: new Date(), hiddenUser: app.session.user });
 
     return this.save({ isHidden: true }).then(() => m.redraw());
@@ -167,6 +167,7 @@ export default {
    * @return {Promise}
    */
   deleteAction(context) {
+    if (!confirm(extractText(app.translator.trans('core.forum.post_controls.delete_confirmation')))) return;
     if (context) context.loading = true;
 
     return this.delete()
@@ -178,10 +179,7 @@ export default {
         // If this was the last post in the discussion, then we will assume that
         // the whole discussion was deleted too.
         if (!discussion.postIds().length) {
-          // If there is a discussion list in the cache, remove this discussion.
-          if (app.cache.discussionList) {
-            app.cache.discussionList.removeDiscussion(discussion);
-          }
+          app.discussions.removeDiscussion(discussion);
 
           if (app.viewingDiscussion(discussion)) {
             app.history.back();

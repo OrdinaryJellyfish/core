@@ -1,4 +1,5 @@
 import ComposerBody from './ComposerBody';
+import Button from '../../common/components/Button';
 import icon from '../../common/helpers/icon';
 
 function minimizeComposerIfFullScreen(e) {
@@ -19,16 +20,6 @@ function minimizeComposerIfFullScreen(e) {
  * - `post`
  */
 export default class EditPostComposer extends ComposerBody {
-  init() {
-    super.init();
-
-    this.editor.props.preview = (e) => {
-      minimizeComposerIfFullScreen(e);
-
-      m.route(app.route.post(this.props.post));
-    };
-  }
-
   static initProps(props) {
     super.initProps(props);
 
@@ -64,21 +55,58 @@ export default class EditPostComposer extends ComposerBody {
   }
 
   /**
+   * Jump to the preview when triggered by the text editor.
+   */
+  jumpToPreview(e) {
+    minimizeComposerIfFullScreen(e);
+
+    m.route(app.route.post(this.props.post));
+  }
+
+  /**
    * Get the data to submit to the server when the post is saved.
    *
    * @return {Object}
    */
   data() {
     return {
-      content: this.content(),
+      content: this.composer.fields.content(),
     };
   }
 
   onsubmit() {
+    const discussion = this.props.post.discussion();
+
     this.loading = true;
 
     const data = this.data();
 
-    this.props.post.save(data).then(() => app.composer.hide(), this.loaded.bind(this));
+    this.props.post.save(data).then((post) => {
+      // If we're currently viewing the discussion which this edit was made
+      // in, then we can scroll to the post.
+      if (app.viewingDiscussion(discussion)) {
+        app.current.get('stream').goToNumber(post.number());
+      } else {
+        // Otherwise, we'll create an alert message to inform the user that
+        // their edit has been made, containing a button which will
+        // transition to their edited post when clicked.
+        let alert;
+        const viewButton = Button.component({
+          className: 'Button Button--link',
+          children: app.translator.trans('core.forum.composer_edit.view_button'),
+          onclick: () => {
+            m.route(app.route.post(post));
+            app.alerts.dismiss(alert);
+          },
+        });
+        alert = app.alerts.show({
+          type: 'success',
+          children: app.translator.trans('core.forum.composer_edit.edited_message'),
+          controls: [viewButton],
+        });
+      }
+
+      this.composer.hide();
+    }, this.loaded.bind(this));
   }
 }

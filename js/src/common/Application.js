@@ -1,5 +1,4 @@
 import ItemList from './utils/ItemList';
-import Alert from './components/Alert';
 import Button from './components/Button';
 import ModalManager from './components/ModalManager';
 import AlertManager from './components/AlertManager';
@@ -12,6 +11,7 @@ import Drawer from './utils/Drawer';
 import mapRoutes from './utils/mapRoutes';
 import RequestError from './utils/RequestError';
 import ScrollListener from './utils/ScrollListener';
+import liveHumanTimes from './utils/liveHumanTimes';
 import { extend } from './extend';
 
 import Forum from './models/Forum';
@@ -21,6 +21,9 @@ import Post from './models/Post';
 import Group from './models/Group';
 import Notification from './models/Notification';
 import { flattenDeep } from 'lodash-es';
+import PageState from './states/PageState';
+import ModalManagerState from './states/ModalManagerState';
+import AlertManagerState from './states/AlertManagerState';
 
 /**
  * The `App` class provides a container for an application, as well as various
@@ -107,13 +110,49 @@ export default class Application {
   booted = false;
 
   /**
-   * An Alert that was shown as a result of an AJAX request error. If present,
-   * it will be dismissed on the next successful request.
+   * The key for an Alert that was shown as a result of an AJAX request error.
+   * If present, it will be dismissed on the next successful request.
    *
-   * @type {null|Alert}
+   * @type {int}
    * @private
    */
-  requestError = null;
+  requestErrorAlert = null;
+
+  /**
+   * The page the app is currently on.
+   *
+   * This object holds information about the type of page we are currently
+   * visiting, and sometimes additional arbitrary page state that may be
+   * relevant to lower-level components.
+   *
+   * @type {PageState}
+   */
+  current = new PageState(null);
+
+  /**
+   * The page the app was on before the current page.
+   *
+   * Once the application navigates to another page, the object previously
+   * assigned to this.current will be moved to this.previous, while this.current
+   * is re-initialized.
+   *
+   * @type {PageState}
+   */
+  previous = new PageState(null);
+
+  /*
+   * An object that manages modal state.
+   *
+   * @type {ModalManagerState}
+   */
+  modal = new ModalManagerState();
+
+  /**
+   * An object that manages the state of active alerts.
+   *
+   * @type {AlertManagerState}
+   */
+  alerts = new AlertManagerState();
 
   data;
 
@@ -150,8 +189,8 @@ export default class Application {
   }
 
   mount(basePath = '') {
-    this.modal = m.mount(document.getElementById('modal'), <ModalManager />);
-    this.alerts = m.mount(document.getElementById('alerts'), <AlertManager />);
+    m.mount(document.getElementById('modal'), <ModalManager state={this.modal} />);
+    m.mount(document.getElementById('alerts'), <AlertManager state={this.alerts} />);
 
     this.drawer = new Drawer();
 
@@ -169,6 +208,8 @@ export default class Application {
     $(() => {
       $('body').addClass('ontouchstart' in window ? 'touch' : 'no-touch');
     });
+
+    liveHumanTimes();
   }
 
   /**
@@ -187,6 +228,16 @@ export default class Application {
     }
 
     return null;
+  }
+
+  /**
+   * Determine the current screen mode, based on our media queries.
+   *
+   * @returns {String} - one of "phone", "tablet", "desktop" or "desktop-hd"
+   */
+  screen() {
+    const styles = getComputedStyle(document.documentElement);
+    return styles.getPropertyValue('--flarum-screen');
   }
 
   /**
@@ -211,7 +262,10 @@ export default class Application {
   }
 
   updateTitle() {
-    document.title = (this.titleCount ? `(${this.titleCount}) ` : '') + (this.title ? this.title + ' - ' : '') + this.forum.attribute('title');
+    const count = this.titleCount ? `(${this.titleCount}) ` : '';
+    const pageTitleWithSeparator = this.title && m.route() !== '/' ? this.title + ' - ' : '';
+    const title = this.forum.attribute('title');
+    document.title = count + pageTitleWithSeparator + title;
   }
 
   /**
@@ -284,7 +338,7 @@ export default class Application {
       }
     };
 
-    if (this.requestError) this.alerts.dismiss(this.requestError.alert);
+    if (this.requestErrorAlert) this.alerts.dismiss(this.requestErrorAlert);
 
     // Now make the request. If it's a failure, inspect the error that was
     // returned and show an alert containing its contents.
@@ -293,8 +347,6 @@ export default class Application {
     m.request(options).then(
       (response) => deferred.resolve(response),
       (error) => {
-        this.requestError = error;
-
         let children;
 
         switch (error.status) {
@@ -324,21 +376,35 @@ export default class Application {
         }
 
         const isDebug = app.forum.attribute('debug');
+        // contains a formatted errors if possible, response must be an JSON API array of errors
+        // the details property is decoded to transform escaped characters such as '\n'
+        const formattedError = error.response && Array.isArray(error.response.errors) && error.response.errors.map((e) => decodeURI(e.detail));
 
-        error.alert = new Alert({
+        error.alert = {
           type: 'error',
           children,
           controls: isDebug && [
-            <Button className="Button Button--link" onclick={this.showDebug.bind(this, error)}>
+            <Button className="Button Button--link" onclick={this.showDebug.bind(this, error, formattedError)}>
               Debug
             </Button>,
           ],
-        });
+        };
 
         try {
           options.errorHandler(error);
         } catch (error) {
-          this.alerts.show(error.alert);
+          if (isDebug && error.xhr) {
+            const { method, url } = error.options;
+            const { status = '' } = error.xhr;
+
+            console.group(`${method} ${url} ${status}`);
+
+            console.error(...(formattedError || [error]));
+
+            console.groupEnd();
+          }
+
+          this.requestErrorAlert = this.alerts.show(error.alert);
         }
 
         deferred.reject(error);
@@ -350,12 +416,13 @@ export default class Application {
 
   /**
    * @param {RequestError} error
+   * @param {string[]} [formattedError]
    * @private
    */
-  showDebug(error) {
-    this.alerts.dismiss(this.requestError.alert);
+  showDebug(error, formattedError) {
+    this.alerts.dismiss(this.requestErrorAlert);
 
-    this.modal.show(new RequestErrorModal({ error }));
+    this.modal.show(RequestErrorModal, { error, formattedError });
   }
 
   /**

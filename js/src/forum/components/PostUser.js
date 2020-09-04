@@ -13,15 +13,6 @@ import listItems from '../../common/helpers/listItems';
  * - `post`
  */
 export default class PostUser extends Component {
-  init() {
-    /**
-     * Whether or not the user hover card is visible.
-     *
-     * @type {Boolean}
-     */
-    this.cardVisible = false;
-  }
-
   view() {
     const post = this.props.post;
     const user = post.user();
@@ -38,7 +29,7 @@ export default class PostUser extends Component {
 
     let card = '';
 
-    if (!post.isHidden() && this.cardVisible) {
+    if (!post.isHidden() && this.props.cardVisible) {
       card = UserCard.component({
         user,
         className: 'UserCard--popover',
@@ -81,9 +72,7 @@ export default class PostUser extends Component {
    * Show the user card.
    */
   showCard() {
-    this.cardVisible = true;
-
-    m.redraw();
+    this.props.oncardshow();
 
     setTimeout(() => this.$('.UserCard').addClass('in'));
   }
@@ -95,8 +84,7 @@ export default class PostUser extends Component {
     this.$('.UserCard')
       .removeClass('in')
       .one('transitionend webkitTransitionEnd oTransitionEnd', () => {
-        this.cardVisible = false;
-        m.redraw();
+        this.props.oncardhide();
       });
   }
 }

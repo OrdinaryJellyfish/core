@@ -1,7 +1,5 @@
 import History from './utils/History';
 import Pane from './utils/Pane';
-import Search from './components/Search';
-import ReplyComposer from './components/ReplyComposer';
 import DiscussionPage from './components/DiscussionPage';
 import SignUpModal from './components/SignUpModal';
 import HeaderPrimary from './components/HeaderPrimary';
@@ -14,6 +12,10 @@ import routes from './routes';
 import alertEmailConfirmation from './utils/alertEmailConfirmation';
 import Application from '../common/Application';
 import Navigation from '../common/components/Navigation';
+import NotificationListState from './states/NotificationListState';
+import GlobalSearchState from './states/GlobalSearchState';
+import DiscussionListState from './states/DiscussionListState';
+import ComposerState from './states/ComposerState';
 
 export default class ForumApplication extends Application {
   /**
@@ -33,13 +35,6 @@ export default class ForumApplication extends Application {
     comment: CommentPost,
     discussionRenamed: DiscussionRenamedPost,
   };
-
-  /**
-   * The page's search component instance.
-   *
-   * @type {Search}
-   */
-  search = new Search();
 
   /**
    * An object which controls the state of the page's side pane.
@@ -63,10 +58,43 @@ export default class ForumApplication extends Application {
    */
   history = new History();
 
+  /**
+   * An object which controls the state of the user's notifications.
+   *
+   * @type {NotificationListState}
+   */
+  notifications = new NotificationListState(this);
+
+  /*
+   * An object which stores previously searched queries and provides convenient
+   * tools for retrieving and managing search values.
+   *
+   * @type {GlobalSearchState}
+   */
+  search = new GlobalSearchState();
+
+  /*
+   * An object which controls the state of the composer.
+   */
+  composer = new ComposerState();
+
   constructor() {
     super();
 
     routes(this);
+
+    /**
+     * An object which controls the state of the cached discussion list, which
+     * is used in the index page and the slideout pane.
+     *
+     * @type {DiscussionListState}
+     */
+    this.discussions = new DiscussionListState({}, this);
+
+    /**
+     * @deprecated beta 14, remove in beta 15.
+     */
+    this.cache.discussionList = this.discussions;
   }
 
   /**
@@ -91,9 +119,9 @@ export default class ForumApplication extends Application {
     m.mount(document.getElementById('header-navigation'), Navigation.component());
     m.mount(document.getElementById('header-primary'), HeaderPrimary.component());
     m.mount(document.getElementById('header-secondary'), HeaderSecondary.component());
+    m.mount(document.getElementById('composer'), Composer.component({ state: this.composer }));
 
     this.pane = new Pane(document.getElementById('app'));
-    this.composer = m.mount(document.getElementById('composer'), Composer.component());
 
     m.route.mode = 'pathname';
     super.mount(this.forum.attribute('basePath'));
@@ -116,28 +144,13 @@ export default class ForumApplication extends Application {
   }
 
   /**
-   * Check whether or not the user is currently composing a reply to a
-   * discussion.
-   *
-   * @param {Discussion} discussion
-   * @return {Boolean}
-   */
-  composingReplyTo(discussion) {
-    return (
-      this.composer.component instanceof ReplyComposer &&
-      this.composer.component.props.discussion === discussion &&
-      this.composer.position !== Composer.PositionEnum.HIDDEN
-    );
-  }
-
-  /**
    * Check whether or not the user is currently viewing a discussion.
    *
    * @param {Discussion} discussion
    * @return {Boolean}
    */
   viewingDiscussion(discussion) {
-    return this.current instanceof DiscussionPage && this.current.discussion === discussion;
+    return this.current.matches(DiscussionPage, { discussion });
   }
 
   /**
@@ -157,8 +170,7 @@ export default class ForumApplication extends Application {
     if (payload.loggedIn) {
       window.location.reload();
     } else {
-      const modal = new SignUpModal(payload);
-      this.modal.show(modal);
+      this.modal.show(SignUpModal, payload);
     }
   }
 }

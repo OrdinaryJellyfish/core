@@ -1,4 +1,4 @@
-import Page from './Page';
+import Page from '../../common/components/Page';
 import FieldSet from '../../common/components/FieldSet';
 import Button from '../../common/components/Button';
 import Alert from '../../common/components/Alert';
@@ -11,6 +11,7 @@ export default class MailPage extends Page {
     super.init();
 
     this.saving = false;
+    this.sendingTest = false;
     this.refresh();
   }
 
@@ -28,7 +29,7 @@ export default class MailPage extends Page {
     app
       .request({
         method: 'GET',
-        url: app.forum.attribute('apiUrl') + '/mail-settings',
+        url: app.forum.attribute('apiUrl') + '/mail/settings',
       })
       .then((response) => {
         this.driverFields = response['data']['attributes']['fields'];
@@ -121,11 +122,27 @@ export default class MailPage extends Page {
                 ],
               })}
 
-            {Button.component({
-              type: 'submit',
-              className: 'Button Button--primary',
-              children: app.translator.trans('core.admin.email.submit_button'),
-              disabled: !this.changed(),
+            <FieldSet>
+              {Button.component({
+                type: 'submit',
+                className: 'Button Button--primary',
+                children: app.translator.trans('core.admin.email.submit_button'),
+                disabled: !this.changed(),
+              })}
+            </FieldSet>
+
+            {FieldSet.component({
+              label: app.translator.trans('core.admin.email.send_test_mail_heading'),
+              className: 'MailPage-MailSettings',
+              children: [
+                <div className="helpText">{app.translator.trans('core.admin.email.send_test_mail_text', { email: app.session.user.email() })}</div>,
+                Button.component({
+                  className: 'Button Button--primary',
+                  children: app.translator.trans('core.admin.email.send_test_mail_button'),
+                  disabled: this.sendingTest || this.changed(),
+                  onclick: () => this.sendTestEmail(),
+                }),
+              ],
             })}
           </form>
         </div>
@@ -149,10 +166,35 @@ export default class MailPage extends Page {
     return this.fields.some((key) => this.values[key]() !== app.data.settings[key]);
   }
 
+  sendTestEmail() {
+    if (this.saving || this.sendingTest) return;
+
+    this.sendingTest = true;
+    app.alerts.dismiss(this.testEmailSuccessAlert);
+
+    app
+      .request({
+        method: 'POST',
+        url: app.forum.attribute('apiUrl') + '/mail/test',
+      })
+      .then((response) => {
+        this.sendingTest = false;
+        this.testEmailSuccessAlert = app.alerts.show({
+          type: 'success',
+          children: app.translator.trans('core.admin.email.send_test_mail_success'),
+        });
+      })
+      .catch((error) => {
+        this.sendingTest = false;
+        m.redraw();
+        throw error;
+      });
+  }
+
   onsubmit(e) {
     e.preventDefault();
 
-    if (this.saving) return;
+    if (this.saving || this.sendingTest) return;
 
     this.saving = true;
     app.alerts.dismiss(this.successAlert);
@@ -163,7 +205,10 @@ export default class MailPage extends Page {
 
     saveSettings(settings)
       .then(() => {
-        app.alerts.show((this.successAlert = new Alert({ type: 'success', children: app.translator.trans('core.admin.basics.saved_message') })));
+        this.successAlert = app.alerts.show({
+          type: 'success',
+          children: app.translator.trans('core.admin.basics.saved_message'),
+        });
       })
       .catch(() => {})
       .then(() => {

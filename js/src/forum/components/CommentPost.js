@@ -31,11 +31,16 @@ export default class CommentPost extends Post {
      */
     this.revealContent = false;
 
-    // Create an instance of the component that displays the post's author so
-    // that we can force the post to rerender when the user card is shown.
-    this.postUser = new PostUser({ post: this.props.post });
+    /**
+     * Whether or not the user hover card inside of PostUser is visible.
+     * The property must be managed in CommentPost to be able to use it in the subtree check
+     *
+     * @type {Boolean}
+     */
+    this.cardVisible = false;
+
     this.subtree.check(
-      () => this.postUser.cardVisible,
+      () => this.cardVisible,
       () => this.isEditing()
     );
   }
@@ -72,7 +77,7 @@ export default class CommentPost extends Post {
   }
 
   isEditing() {
-    return app.composer.component instanceof EditPostComposer && app.composer.component.props.post === this.props.post;
+    return app.composer.bodyMatches(EditPostComposer, { post: this.props.post });
   }
 
   attrs() {
@@ -100,7 +105,7 @@ export default class CommentPost extends Post {
     // body with a preview.
     let preview;
     const updatePreview = () => {
-      const content = app.composer.component.content();
+      const content = app.composer.fields.content();
 
       if (preview === content) return;
 
@@ -129,13 +134,27 @@ export default class CommentPost extends Post {
   headerItems() {
     const items = new ItemList();
     const post = this.props.post;
-    const props = { post };
 
-    items.add('user', this.postUser.render(), 100);
-    items.add('meta', PostMeta.component(props));
+    items.add(
+      'user',
+      PostUser.component({
+        post,
+        cardVisible: this.cardVisible,
+        oncardshow: () => {
+          this.cardVisible = true;
+          m.redraw();
+        },
+        oncardhide: () => {
+          this.cardVisible = false;
+          m.redraw();
+        },
+      }),
+      100
+    );
+    items.add('meta', PostMeta.component({ post }));
 
     if (post.isEdited() && !post.isHidden()) {
-      items.add('edited', PostEdited.component(props));
+      items.add('edited', PostEdited.component({ post }));
     }
 
     // If the post is hidden, add a button that allows toggling the visibility

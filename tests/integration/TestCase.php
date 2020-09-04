@@ -11,6 +11,7 @@ namespace Flarum\Tests\integration;
 
 use Flarum\Extend\ExtenderInterface;
 use Flarum\Foundation\InstalledSite;
+use Flarum\Foundation\Paths;
 use Illuminate\Database\ConnectionInterface;
 use Laminas\Diactoros\ServerRequest;
 use Psr\Http\Message\ResponseInterface;
@@ -33,12 +34,12 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     {
         if (is_null($this->app)) {
             $site = new InstalledSite(
-                [
+                new Paths([
                     'base' => __DIR__.'/tmp',
                     'vendor' => __DIR__.'/../../vendor',
                     'public' => __DIR__.'/tmp/public',
                     'storage' => __DIR__.'/tmp/storage',
-                ],
+                ]),
                 include __DIR__.'/tmp/config.php'
             );
 
@@ -55,9 +56,9 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
      */
     protected $extenders = [];
 
-    protected function extend(ExtenderInterface $extender)
+    protected function extend(ExtenderInterface ...$extenders)
     {
-        $this->extenders[] = $extender;
+        $this->extenders = array_merge($this->extenders, $extenders);
     }
 
     /**

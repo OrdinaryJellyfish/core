@@ -1,8 +1,7 @@
-import Page from './Page';
+import Page from '../../common/components/Page';
 import FieldSet from '../../common/components/FieldSet';
 import Select from '../../common/components/Select';
 import Button from '../../common/components/Button';
-import Alert from '../../common/components/Alert';
 import saveSettings from '../utils/saveSettings';
 import ItemList from '../../common/utils/ItemList';
 import Switch from '../../common/components/Switch';
@@ -21,6 +20,7 @@ export default class BasicsPage extends Page {
       'default_route',
       'welcome_title',
       'welcome_message',
+      'display_name_driver',
     ];
     this.values = {};
 
@@ -32,6 +32,14 @@ export default class BasicsPage extends Page {
     for (const i in locales) {
       this.localeOptions[i] = `${locales[i]} (${i})`;
     }
+
+    this.displayNameOptions = {};
+    const displayNameDrivers = app.data.displayNameDrivers;
+    displayNameDrivers.forEach(function (identifier) {
+      this.displayNameOptions[identifier] = identifier;
+    }, this);
+
+    if (!this.values.display_name_driver() && displayNameDrivers.includes('username')) this.values.display_name_driver('username');
 
     if (typeof this.values.show_language_selector() !== 'number') this.values.show_language_selector(1);
   }
@@ -114,6 +122,20 @@ export default class BasicsPage extends Page {
               ],
             })}
 
+            {Object.keys(this.displayNameOptions).length > 1
+              ? FieldSet.component({
+                  label: app.translator.trans('core.admin.basics.display_name_heading'),
+                  children: [
+                    <div className="helpText">{app.translator.trans('core.admin.basics.display_name_text')}</div>,
+                    Select.component({
+                      options: this.displayNameOptions,
+                      value: this.values.display_name_driver(),
+                      onchange: this.values.display_name_driver,
+                    }),
+                  ],
+                })
+              : ''}
+
             {Button.component({
               type: 'submit',
               className: 'Button Button--primary',
@@ -163,7 +185,10 @@ export default class BasicsPage extends Page {
 
     saveSettings(settings)
       .then(() => {
-        app.alerts.show((this.successAlert = new Alert({ type: 'success', children: app.translator.trans('core.admin.basics.saved_message') })));
+        this.successAlert = app.alerts.show({
+          type: 'success',
+          children: app.translator.trans('core.admin.basics.saved_message'),
+        });
       })
       .catch(() => {})
       .then(() => {

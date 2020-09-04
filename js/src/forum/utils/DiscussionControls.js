@@ -167,28 +167,26 @@ export default {
 
     if (app.session.user) {
       if (this.canReply()) {
-        let component = app.composer.component;
-        if (!app.composingReplyTo(this) || forceRefresh) {
-          component = new ReplyComposer({
+        if (!app.composer.composingReplyTo(this) || forceRefresh) {
+          app.composer.load(ReplyComposer, {
             user: app.session.user,
             discussion: this,
           });
-          app.composer.load(component);
         }
         app.composer.show();
 
         if (goToLast && app.viewingDiscussion(this) && !app.composer.isFullScreen()) {
-          app.current.stream.goToNumber('reply');
+          app.current.get('stream').goToNumber('reply');
         }
 
-        deferred.resolve(component);
+        deferred.resolve(app.composer);
       } else {
         deferred.reject();
       }
     } else {
       deferred.reject();
 
-      app.modal.show(new LogInModal());
+      app.modal.show(LogInModal);
     }
 
     return deferred.promise;
@@ -229,13 +227,7 @@ export default {
         app.history.back();
       }
 
-      return this.delete().then(() => {
-        // If there is a discussion list in the cache, remove this discussion.
-        if (app.cache.discussionList) {
-          app.cache.discussionList.removeDiscussion(this);
-          m.redraw();
-        }
-      });
+      return this.delete().then(() => app.discussions.removeDiscussion(this));
     }
   },
 
@@ -245,11 +237,9 @@ export default {
    * @return {Promise}
    */
   renameAction() {
-    return app.modal.show(
-      new RenameDiscussionModal({
-        currentTitle: this.title(),
-        discussion: this,
-      })
-    );
+    return app.modal.show(RenameDiscussionModal, {
+      currentTitle: this.title(),
+      discussion: this,
+    });
   },
 };

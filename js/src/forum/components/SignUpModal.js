@@ -145,7 +145,7 @@ export default class SignUpModal extends Modal {
       password: this.password(),
     };
 
-    app.modal.show(new LogInModal(props));
+    app.modal.show(LogInModal, props);
   }
 
   onready() {
@@ -177,7 +177,7 @@ export default class SignUpModal extends Modal {
    * Get the data that should be submitted in the sign-up request.
    *
    * @return {Object}
-   * @public
+   * @protected
    */
   submitData() {
     const data = {
